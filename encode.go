@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 
@@ -11,8 +12,8 @@ import (
 type EncodeCommand struct {
 	fs *flag.FlagSet
 
-	dnsType  string
-	hostname string
+	dnsType string
+	verbose bool
 }
 
 func NewEncodeCommand() *EncodeCommand {
@@ -20,8 +21,8 @@ func NewEncodeCommand() *EncodeCommand {
 		fs: flag.NewFlagSet("encode", flag.ContinueOnError),
 	}
 
-	cmd.fs.StringVar(&cmd.dnsType, "t", "A", "Type of DNS request. (A/AAAA)")
-	cmd.fs.StringVar(&cmd.hostname, "host", "example.com", "Hostname of the DNS request.")
+	cmd.fs.StringVar(&cmd.dnsType, "t", "A", "Type of DNS request. (A/AAAA/SVCB)")
+	cmd.fs.BoolVar(&cmd.verbose, "v", false, "Verbose mode")
 
 	return cmd
 }
@@ -35,37 +36,39 @@ func (cmd *EncodeCommand) Init(args []string) error {
 }
 
 func (cmd *EncodeCommand) Run() error {
-	encoded, err := encode(cmd.dnsType, cmd.hostname)
-	if err != nil {
-		return err
-	} else {
-		println(encoded)
+	args := cmd.fs.Args()
+	if len(args) < 1 {
+		return errors.New("missing request hostname")
 	}
 
-	return nil
+	hostname := args[0]
+	return cmd.encodeAndPrint(cmd.dnsType, hostname)
 }
 
-func encode(t string, hostname string) (string, error) {
+func (cmd *EncodeCommand) encodeAndPrint(t string, hostname string) error {
 	tt, err := mapType(t)
 	if err != nil {
-		return "", err
-	}
-
-	q := dns.Question{
-		Name:   normalizeHostname(hostname),
-		Qtype:  tt,
-		Qclass: dns.ClassINET,
+		return err
 	}
 
 	msg := dns.Msg{}
-	msg.Question = append(msg.Question, q)
+	msg.SetQuestion(normalizeHostname(hostname), tt)
 
 	wire, err := msg.Pack()
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return base64.StdEncoding.EncodeToString(wire), nil
+	println(base64.StdEncoding.EncodeToString(wire))
+
+	if cmd.verbose {
+		println("[Verbose]")
+		println(" Message that was encoded:")
+		println(msg.String())
+		println("[/Verbose]")
+	}
+
+	return nil
 }
 
 func normalizeHostname(hostname string) string {
