@@ -59,13 +59,11 @@ func (cmd *EncodeCommand) encodeAndPrint(t string, hostname string) error {
 		return err
 	}
 
-	println(base64.StdEncoding.EncodeToString(wire))
+	print(base64.StdEncoding.EncodeToString(wire))
 
 	if cmd.verbose {
-		println("[Verbose]")
-		println(" Message that was encoded:")
+		println("\nMessage that was encoded:")
 		println(msg.String())
-		println("[/Verbose]")
 	}
 
 	return nil

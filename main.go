@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+var subcommands = map[string]Command{
+	"encode": NewEncodeCommand(),
+	"decode": NewDecodeCommand(),
+}
+
 type Command interface {
 	Init([]string) error
 	Run() error
@@ -21,26 +26,19 @@ func main() {
 
 func root(args []string) error {
 	if len(args) < 1 {
-		return errors.New("You must pass a sub-command")
-	}
-
-	cmds := []Command{
-		NewEncodeCommand(),
-		NewDecodeCommand(),
+		return errors.New("you must pass a sub-command")
 	}
 
 	subcommand := os.Args[1]
 
-	for _, cmd := range cmds {
-		if cmd.Name() == subcommand {
-			err := cmd.Init(os.Args[2:])
-			if err != nil {
-				return err
-			}
-
-			return cmd.Run()
+	if cmd, ok := subcommands[subcommand]; ok {
+		err := cmd.Init(os.Args[2:])
+		if err != nil {
+			return err
 		}
+
+		return cmd.Run()
 	}
 
-	return fmt.Errorf("Unknown subcommand: %s", subcommand)
+	return fmt.Errorf("unknown subcommand: %s", subcommand)
 }
