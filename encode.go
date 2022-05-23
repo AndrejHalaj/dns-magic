@@ -21,7 +21,7 @@ func NewEncodeCommand() *EncodeCommand {
 		fs: flag.NewFlagSet("encode", flag.ContinueOnError),
 	}
 
-	cmd.fs.StringVar(&cmd.dnsType, "t", "A", "Type of DNS request. (A/AAAA/SVCB)")
+	cmd.fs.StringVar(&cmd.dnsType, "t", "A", "Type of DNS request. (refer to types.go for supported types)")
 	cmd.fs.BoolVar(&cmd.verbose, "v", false, "Verbose mode")
 
 	return cmd
@@ -77,15 +77,10 @@ func normalizeHostname(hostname string) string {
 	return hostname + "."
 }
 
-func mapType(t string) (uint16, error) {
-	switch t {
-	case "A":
-		return dns.TypeA, nil
-	case "AAAA":
-		return dns.TypeAAAA, nil
-	case "SVCB":
-		return dns.TypeSVCB, nil
-	default:
-		return 0, fmt.Errorf("Invalid request type %s. Only A/AAAA/SVCB are supported.", t)
+func mapType(typeStr string) (uint16, error) {
+	if t, ok := types[typeStr]; ok {
+		return t, nil
 	}
+
+	return 0, fmt.Errorf("invalid request type %s, refer to types.go for supported types", typeStr)
 }
