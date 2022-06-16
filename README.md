@@ -8,4 +8,4 @@ go build
 # Basic Usage
 ./dns-magic encode [-t A/AAAA/... (default: A)] [-v] hostname\
 ./dns-magic decode request\
-./dns-magic file-encode [-t A/AAAA/... (default: A)] [-o outputcsv (default: output.csv)] inputfile
+./dns-magic file-encode [-o outputcsv (default: output.csv)] inputcsv
