@@ -6,7 +6,9 @@ import (
 	"encoding/csv"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/miekg/dns"
 )
@@ -14,7 +16,6 @@ import (
 type FileEncodeCommand struct {
 	fs *flag.FlagSet
 
-	dnsType    string
 	outputFile string
 }
 
@@ -23,7 +24,6 @@ func NewFileEncodeCommand() *FileEncodeCommand {
 		fs: flag.NewFlagSet("file-encode", flag.ContinueOnError),
 	}
 
-	cmd.fs.StringVar(&cmd.dnsType, "t", "A", "Type of DNS request. (refer to types.go for supported types)")
 	cmd.fs.StringVar(&cmd.outputFile, "o", "output.csv", "Output CSV file.")
 
 	return cmd
@@ -43,26 +43,28 @@ func (cmd *FileEncodeCommand) Run() error {
 		return errors.New("missing filename")
 	}
 
-	filename := args[0]
-	return cmd.encodeAndWrite(cmd.dnsType, filename)
+	return cmd.encodeAndWrite(args[0])
 }
 
-func (cmd *FileEncodeCommand) encodeAndWrite(t string, filename string) error {
+func (cmd *FileEncodeCommand) encodeAndWrite(filename string) error {
 	f, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
 	s := bufio.NewScanner(f)
 
-	tt, err := mapType(t)
-	if err != nil {
-		return err
-	}
-
 	r := make([][]string, 0, 100)
 
 	for s.Scan() {
-		hostname := s.Text()
+		data := strings.Split(s.Text(), ",")
+		hostname := data[0]
+		reqType := data[1]
+
+		tt, err := mapType(reqType)
+		if err != nil {
+			fmt.Printf("unsupported type: %v\n", reqType)
+			return err
+		}
 
 		msg := dns.Msg{}
 		msg.SetQuestion(normalizeHostname(hostname), tt)
@@ -72,7 +74,7 @@ func (cmd *FileEncodeCommand) encodeAndWrite(t string, filename string) error {
 			return err
 		}
 
-		r = append(r, []string{hostname, base64.StdEncoding.EncodeToString(wire)})
+		r = append(r, []string{hostname, reqType, base64.StdEncoding.EncodeToString(wire)})
 	}
 
 	csvFile, err := os.Create(cmd.outputFile)
@@ -82,7 +84,7 @@ func (cmd *FileEncodeCommand) encodeAndWrite(t string, filename string) error {
 	defer csvFile.Close()
 
 	csvWriter := csv.NewWriter(csvFile)
-	err = csvWriter.Write([]string{"hostname", "encoded"})
+	err = csvWriter.Write([]string{"hostname", "type", "encoded"})
 	if err != nil {
 		return err
 	}
