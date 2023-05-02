@@ -42,10 +42,16 @@ func (cmd *EncodeCommand) Run() error {
 	}
 
 	hostname := args[0]
-	return cmd.encodeAndPrint(cmd.dnsType, hostname)
+
+	var addEDE bool
+	if len(args) > 1 {
+		addEDE = args[1] == "add_ede"
+	}
+
+	return cmd.encodeAndPrint(cmd.dnsType, hostname, addEDE)
 }
 
-func (cmd *EncodeCommand) encodeAndPrint(t string, hostname string) error {
+func (cmd *EncodeCommand) encodeAndPrint(t string, hostname string, addEDE bool) error {
 	tt, err := mapType(t)
 	if err != nil {
 		return err
@@ -53,6 +59,12 @@ func (cmd *EncodeCommand) encodeAndPrint(t string, hostname string) error {
 
 	msg := dns.Msg{}
 	msg.SetQuestion(normalizeHostname(hostname), tt)
+
+	if addEDE {
+		edns := &dns.EDNS0_EDE{InfoCode: dns.ExtendedErrorCodeBlocked, ExtraText: "Some extra text!"}
+		msg.SetEdns0(4096, true)
+		msg.IsEdns0().Option = append(msg.IsEdns0().Option, edns)
+	}
 
 	wire, err := msg.Pack()
 	if err != nil {
