@@ -7,9 +7,10 @@ import (
 )
 
 var subcommands = map[string]Command{
-	"encode": NewEncodeCommand(),
-	"decode": NewDecodeCommand(),
-	"file-encode": NewFileEncodeCommand(),
+	"encode":        NewEncodeCommand(),
+	"decode":        NewDecodeCommand(),
+	"file-encode":   NewFileEncodeCommand(),
+	"decode-binary": NewDecodeBinaryCommand(),
 }
 
 type Command interface {
